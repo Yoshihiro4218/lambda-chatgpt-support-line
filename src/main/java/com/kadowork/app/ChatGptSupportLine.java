@@ -1,11 +1,12 @@
 package com.kadowork.app;
 
 import com.amazonaws.services.lambda.runtime.*;
-import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.*;
 import com.google.gson.*;
 import com.kadowork.app.entity.*;
+import com.theokanning.openai.completion.*;
+import com.theokanning.openai.service.*;
 import org.springframework.http.*;
 import org.springframework.web.client.*;
 
@@ -19,6 +20,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String LINE_ACCESS_TOKEN = System.getenv("LINE_ACCESS_TOKEN");
+    private static final String OPENAI_GPT3_TOKEN = System.getenv("OPENAI_GPT3_TOKEN");
     private static final String LINE_REPLY_POST_URL = "https://api.line.me/v2/bot/message/reply";
 
     @Override
@@ -32,12 +34,11 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         try {
             Body body = mapper.readValue(map.get("body").toString(), Body.class);
             System.out.println(body);
-            System.out.println(body.getEvents()[0].getMessage().getText());
             Output output = new Output();
             output.setReplyToken(body.getEvents()[0].getReplyToken());
             Output.Messages outMessage = new Output.Messages();
             outMessage.setType("text");
-            outMessage.setText(body.getEvents()[0].getMessage().getText() + "...を受け取りました！");
+            outMessage.setText(chatOpenAI(body.getEvents()[0].getMessage().getText()));
             output.getMessages().add(outMessage);
             System.out.println("Output 作成！");
             System.out.println(output);
@@ -57,6 +58,29 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         }
         System.out.println("処理終了〜");
         return null;
+    }
+
+    private String chatOpenAI(String message) {
+        // 参照: https://qiita.com/blue_islands/items/dd078af9266960a777c4 様
+        final var service = new OpenAiService(OPENAI_GPT3_TOKEN);
+
+        System.out.println("\nCreating completion...");
+
+        final var prompt = "The following is a conversation with an AI assistant. The assistant is helpful, creative, clever.\nHuman: " + message
+                           + "\nAI: ";
+
+        final var completionRequest = CompletionRequest.builder()
+                                                       .model("text-davinci-003")
+                                                       .prompt(prompt)
+                                                       .maxTokens(256)
+                                                       .build();
+        final var completionResult = service.createCompletion(completionRequest);
+        final var choiceList = completionResult.getChoices();
+
+        for (final CompletionChoice choice : choiceList) {
+            System.out.println(choice);
+        }
+        return choiceList.get(0).getText();
     }
 
     private ResponseEntity<String> postLineNotify(String bodyJson) {
