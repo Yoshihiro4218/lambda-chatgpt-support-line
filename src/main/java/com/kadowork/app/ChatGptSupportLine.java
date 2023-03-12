@@ -1,11 +1,15 @@
 package com.kadowork.app;
 
 import com.amazonaws.services.lambda.runtime.*;
+import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.*;
 import com.google.gson.*;
 import com.kadowork.app.entity.*;
 import org.springframework.http.*;
 import org.springframework.web.client.*;
 
+import java.io.*;
 import java.util.*;
 
 import static org.springframework.http.HttpMethod.POST;
@@ -23,21 +27,35 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         System.out.println("I am Lambda!");
         map.forEach((key, value) -> System.out.println(key + ":" + value));
 
-        Body body = (Body) map.get("body");
-        System.out.println(body);
-        System.out.println(body.getEvents()[0].getMessage().getText());
-        Output output = new Output();
-        output.setReplyToken(body.getEvents()[0].getReplyToken());
-        Output.Messages outMessage = new Output.Messages();
-        outMessage.setType("text");
-        outMessage.setText(body.getEvents()[0].getMessage().getText() + "...を受け取りました！");
-        output.getMessages().add(outMessage);
+        // 暫定対応
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            Body body = mapper.readValue(map.get("body").toString(), Body.class);
+            System.out.println(body);
+            System.out.println(body.getEvents()[0].getMessage().getText());
+            Output output = new Output();
+            output.setReplyToken(body.getEvents()[0].getReplyToken());
+            Output.Messages outMessage = new Output.Messages();
+            outMessage.setType("text");
+            outMessage.setText(body.getEvents()[0].getMessage().getText() + "...を受け取りました！");
+            output.getMessages().add(outMessage);
+            System.out.println("Output 作成！");
+            System.out.println(output);
 
-        Gson gson = new Gson();
-        context.getLogger().log(gson.toJson(output));
-        ResponseEntity<String> response = postLineNotify(gson.toJson(output));
-        System.out.println(response.getBody());
+            Gson gson = new Gson();
+            context.getLogger().log(gson.toJson(output));
+            ResponseEntity<String> response = postLineNotify(gson.toJson(output));
+            System.out.println(response.getBody());
 
+            return null;
+        } catch (JsonParseException e) {
+            e.printStackTrace();
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("処理終了〜");
         return null;
     }
 
