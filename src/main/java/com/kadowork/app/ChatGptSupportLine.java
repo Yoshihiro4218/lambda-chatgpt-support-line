@@ -2,35 +2,28 @@ package com.kadowork.app;
 
 import com.amazonaws.services.lambda.runtime.*;
 import com.google.gson.*;
-import com.kadowork.app.entity.*;
 import org.springframework.http.*;
 import org.springframework.web.client.*;
-
-import java.util.*;
 
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
-public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, Object> {
+public class ChatGptSupportLine implements RequestHandler<Input, Object> {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String LINE_ACCESS_TOKEN = System.getenv("LINE_ACCESS_TOKEN");
     private static final String LINE_REPLY_POST_URL = "https://api.line.me/v2/bot/message/reply";
 
     @Override
-    public Object handleRequest(Map<String, Object> map, Context context) {
-        // test
-        System.out.println("I am Lambda!");
-        map.forEach((key, value) -> System.out.println(key + ":" + value));
+    public Object handleRequest(Input input, Context context) {
+        System.out.println(input.getEvents()[0].getReplyToken());
+        System.out.println(input.getEvents()[0].getMessage().getText());
 
-        Body body = (Body) map.get("body");
-        System.out.println(body);
-        System.out.println(body.getEvents()[0].getMessage().getText());
         Output output = new Output();
-        output.setReplyToken(body.getEvents()[0].getReplyToken());
-        Output.Messages outMessage = new Output.Messages();
+        output.setReplyToken(input.getEvents()[0].getReplyToken());
+        Messages outMessage = new Messages();
         outMessage.setType("text");
-        outMessage.setText(body.getEvents()[0].getMessage().getText() + "...を受け取りました！");
+        outMessage.setText(input.getEvents()[0].getMessage().getText() + " ...を受け取りました！");
         output.getMessages().add(outMessage);
 
         Gson gson = new Gson();

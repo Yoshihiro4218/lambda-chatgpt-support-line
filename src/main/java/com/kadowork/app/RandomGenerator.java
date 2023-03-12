@@ -1,4 +1,4 @@
-package com.kadowork.app.common;
+package com.kadowork.app;
 
 import java.security.*;
 import java.util.*;
