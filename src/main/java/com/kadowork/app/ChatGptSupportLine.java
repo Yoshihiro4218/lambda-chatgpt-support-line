@@ -7,17 +7,20 @@ import com.google.gson.*;
 import com.kadowork.app.entity.*;
 import com.theokanning.openai.completion.*;
 import com.theokanning.openai.service.*;
+import org.apache.http.impl.client.*;
 import org.springframework.http.*;
+import org.springframework.http.client.*;
 import org.springframework.web.client.*;
 
 import java.io.*;
+import java.time.*;
 import java.util.*;
 
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, Object> {
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = restTemplate();
 
     private static final String LINE_ACCESS_TOKEN = System.getenv("LINE_ACCESS_TOKEN");
     private static final String OPENAI_GPT3_TOKEN = System.getenv("OPENAI_GPT3_TOKEN");
@@ -62,7 +65,10 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
 
     private String chatOpenAI(String message) {
         // 参照: https://qiita.com/blue_islands/items/dd078af9266960a777c4 様
+
+        // TODO: timeout 設定をなんとか。。。
         final var service = new OpenAiService(OPENAI_GPT3_TOKEN);
+//        final var service = OpenAiService.buildApi(OPENAI_GPT3_TOKEN, Duration.ofSeconds(150000L));
 
         System.out.println("\nCreating completion...");
 
@@ -72,7 +78,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         final var completionRequest = CompletionRequest.builder()
                                                        .model("text-davinci-003")
                                                        .prompt(prompt)
-                                                       .maxTokens(256)
+                                                       .maxTokens(1024)
                                                        .build();
         final var completionResult = service.createCompletion(completionRequest);
         final var choiceList = completionResult.getChoices();
@@ -89,6 +95,17 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         headers.setContentType(APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(bodyJson, headers);
         return restTemplate.exchange(LINE_REPLY_POST_URL, POST, httpEntity, String.class);
+    }
+
+    private RestTemplate restTemplate() {
+        var clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory(HttpClientBuilder.create().build());
+        // 接続が確立するまでのタイムアウト
+        clientHttpRequestFactory.setConnectTimeout(5000);
+        // コネクションマネージャーからの接続要求のタイムアウト
+        clientHttpRequestFactory.setConnectionRequestTimeout(5000);
+        // ソケットのタイムアウト（パケット間のタイムアウト）
+        clientHttpRequestFactory.setReadTimeout(5000);
+        return new RestTemplate(clientHttpRequestFactory);
     }
 
 //    private PopularMovie fetchPopularMovies() {
