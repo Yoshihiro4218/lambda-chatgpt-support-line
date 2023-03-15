@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.*;
 import com.google.gson.*;
 import com.kadowork.app.entity.*;
 import com.theokanning.openai.completion.*;
+import com.theokanning.openai.completion.chat.*;
 import com.theokanning.openai.service.*;
 import org.apache.http.impl.client.*;
 import org.springframework.http.*;
@@ -67,26 +68,37 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         // 参照: https://qiita.com/blue_islands/items/dd078af9266960a777c4 様
 
         // TODO: timeout 設定をなんとか。。。
-        final var service = new OpenAiService(OPENAI_GPT3_TOKEN);
-//        final var service = OpenAiService.buildApi(OPENAI_GPT3_TOKEN, Duration.ofSeconds(150000L));
+        final var service = new OpenAiService(OPENAI_GPT3_TOKEN, Duration.ofSeconds(150000L));
 
         System.out.println("\nCreating completion...");
 
-        final var prompt = "The following is a conversation with an AI assistant. The assistant is helpful, creative, clever.\nHuman: " + message
-                           + "\nAI: ";
+//        final var prompt = "The following is a conversation with an AI assistant. The assistant is helpful, creative, clever.\nHuman: " + message
+//                           + "\nAI: ";
+//        final var completionRequest = CompletionRequest.builder()
+//                                                       .model("text-davinci-003")
+//                                                       .prompt(prompt)
+//                                                       .maxTokens(1024)
+//                                                       .build();
+//        final var completionResult = service.createChatCompletion(completionRequest);
+//        final var choiceList = completionResult.getChoices();
+//        for (final CompletionChoice choice : choiceList) {
+//            System.out.println(choice);
+//        }
+//        return choiceList.get(0).getText();
 
-        final var completionRequest = CompletionRequest.builder()
-                                                       .model("text-davinci-003")
-                                                       .prompt(prompt)
-                                                       .maxTokens(1024)
-                                                       .build();
-        final var completionResult = service.createCompletion(completionRequest);
-        final var choiceList = completionResult.getChoices();
-
-        for (final CompletionChoice choice : choiceList) {
+        final var chatMessages = List.of(
+                new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"),
+                new ChatMessage("user", message));
+        final var chatCompletionRequest = ChatCompletionRequest.builder()
+                                                               .model("gpt-3.5-turbo")
+                                                               .maxTokens(1024)
+                                                               .messages(chatMessages)
+                                                               .build();
+        var result = service.createChatCompletion(chatCompletionRequest);
+        for (final ChatCompletionChoice choice : result.getChoices()) {
             System.out.println(choice);
         }
-        return choiceList.get(0).getText();
+        return result.getChoices().get(0).getMessage().getContent();
     }
 
     private ResponseEntity<String> postLineNotify(String bodyJson) {
