@@ -2,7 +2,6 @@ package com.kadowork.app;
 
 import com.kadowork.app.entity.*;
 import lombok.*;
-import org.springframework.stereotype.*;
 import software.amazon.awssdk.enhanced.dynamodb.*;
 
 import java.util.*;
@@ -10,7 +9,6 @@ import java.util.stream.*;
 
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
 
-@Repository
 @AllArgsConstructor
 public class ChatRepository {
     private final DynamoDbEnhancedClient client;

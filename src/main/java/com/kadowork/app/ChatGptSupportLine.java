@@ -7,29 +7,36 @@ import com.google.gson.*;
 import com.kadowork.app.entity.*;
 import com.theokanning.openai.completion.chat.*;
 import com.theokanning.openai.service.*;
-import lombok.*;
 import org.apache.http.impl.client.*;
 import org.springframework.http.*;
 import org.springframework.http.client.*;
-import org.springframework.stereotype.*;
 import org.springframework.web.client.*;
+import software.amazon.awssdk.auth.credentials.*;
 import software.amazon.awssdk.enhanced.dynamodb.*;
+import software.amazon.awssdk.regions.*;
+import software.amazon.awssdk.services.dynamodb.*;
 
 import java.io.*;
+import java.net.*;
 import java.time.*;
 import java.util.*;
-import java.util.stream.*;
 
+import static com.kadowork.app.entity.Chat.Role.assistant;
+import static com.kadowork.app.entity.Chat.Role.user;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
 
 public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, Object> {
     private final RestTemplate restTemplate = restTemplate();
+    private final ChatRepository chatRepository = chatRepository();
 
     private static final String LINE_ACCESS_TOKEN = System.getenv("LINE_ACCESS_TOKEN");
     private static final String OPENAI_GPT3_TOKEN = System.getenv("OPENAI_GPT3_TOKEN");
+    private static final String AWS_ACCESS_KEY = System.getenv("AWS_MY_ACCESS_KEY");
+    private static final String AWS_ACCESS_SECRET = System.getenv("AWS_MY_ACCESS_SECRET");
+
     private static final String LINE_REPLY_POST_URL = "https://api.line.me/v2/bot/message/reply";
+    private static final String DYNAMODB_URL = "https://dynamodb.ap-northeast-1.amazonaws.com";
 
     @Override
     public Object handleRequest(Map<String, Object> map, Context context) {
@@ -46,9 +53,24 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
             output.setReplyToken(body.getEvents()[0].getReplyToken());
             Output.Messages outMessage = new Output.Messages();
             outMessage.setType("text");
-            String message = body.getEvents()[0].getMessage().getText();
+            chatRepository.save(Chat.builder()
+                                    .id(UUID.randomUUID().toString())
+                                    .userId(body.getEvents()[0].getSource().getUserId())
+                                    .role(user)
+                                    .content(body.getEvents()[0].getMessage().getText())
+                                    .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
+                                    .build());
+            List<Chat> chatHistory = chatRepository.scan();
+            String assistantMessage = chatOpenAI(chatHistory);
+            chatRepository.save(Chat.builder()
+                                    .id(UUID.randomUUID().toString())
+                                    .userId("ASSISTANT_" + body.getEvents()[0].getSource().getUserId())
+                                    .role(assistant)
+                                    .content(assistantMessage)
+                                    .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
+                                    .build());
 
-            outMessage.setText(chatOpenAI(message));
+            outMessage.setText(assistantMessage);
             output.getMessages().add(outMessage);
             System.out.println("Output 作成！");
             System.out.println(output);
@@ -70,12 +92,15 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         return null;
     }
 
-    private String chatOpenAI(String message) {
+    private String chatOpenAI(List<Chat> messages) {
         final var service = new OpenAiService(OPENAI_GPT3_TOKEN, Duration.ofSeconds(150000L));
         System.out.println("\nCreating completion...");
-        final var chatMessages = List.of(
-                new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"),
-                new ChatMessage("user", message));
+        List<ChatMessage> chatMessages = new LinkedList<>();
+        chatMessages.add(new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"));
+        messages.stream()
+                .sorted(Comparator.comparing(Chat::getTypedAt))
+                .forEach(x -> chatMessages.add(new ChatMessage(x.getRole().toString(), x.getContent())));
+        System.out.println(chatMessages);
         final var chatCompletionRequest = ChatCompletionRequest.builder()
                                                                .model("gpt-3.5-turbo")
                                                                .maxTokens(1024)
@@ -105,5 +130,19 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         // ソケットのタイムアウト（パケット間のタイムアウト）
         clientHttpRequestFactory.setReadTimeout(5000);
         return new RestTemplate(clientHttpRequestFactory);
+    }
+
+    private ChatRepository chatRepository() {
+
+        DynamoDbClient dynamoDbClient = DynamoDbClient.builder()
+                                                      .region(Region.AP_NORTHEAST_1)
+                                                      .credentialsProvider(StaticCredentialsProvider.create(
+                                                              AwsBasicCredentials.create(AWS_ACCESS_KEY, AWS_ACCESS_SECRET)))
+                                                      .endpointOverride(URI.create(DYNAMODB_URL))
+                                                      .build();
+        DynamoDbEnhancedClient dynamoDbEnhancedClient = DynamoDbEnhancedClient.builder()
+                                                                              .dynamoDbClient(dynamoDbClient)
+                                                                              .build();
+        return new ChatRepository(dynamoDbEnhancedClient);
     }
 }
