@@ -28,7 +28,11 @@ public class ChatRepository {
 
     public List<Chat> scanLimit(int limit) {
         DynamoDbTable<Chat> table = client.table(TABLE_NAME, TableSchema.fromBean(Chat.class));
-        return table.scan(ScanEnhancedRequest.builder().limit(limit).build()).items().stream().collect(Collectors.toList());
+        return table.query(QueryEnhancedRequest.builder()
+                                               .scanIndexForward(false)
+                                               .limit(limit)
+                                               .build())
+                    .items().stream().collect(Collectors.toList());
     }
 
     // index で引くとき

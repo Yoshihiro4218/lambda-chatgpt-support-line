@@ -20,6 +20,7 @@ import java.io.*;
 import java.net.*;
 import java.time.*;
 import java.util.*;
+import java.util.stream.*;
 
 import static com.kadowork.app.entity.Chat.Role.assistant;
 import static com.kadowork.app.entity.Chat.Role.user;
@@ -63,7 +64,14 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
                                     .content(body.getEvents()[0].getMessage().getText())
                                     .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
                                     .build());
-            List<Chat> chatHistory = chatRepository.scanLimit(SCAN_RECORD_NUM);
+            // DynamoDB から指定分だけ取ってきたいが、現状できていないので暫定的に。
+            List<Chat> chatHistory = chatRepository.scan()
+                                                   .stream()
+                                                   .sorted(Comparator.comparing(Chat::getTypedAt).reversed())
+                                                   .limit(SCAN_RECORD_NUM)
+                                                   .collect(Collectors.toList());
+            System.out.println("件数: " + chatHistory.size());
+            System.out.println(chatHistory);
             String assistantMessage = chatOpenAI(chatHistory);
             chatRepository.save(Chat.builder()
                                     .id(UUID.randomUUID().toString())
