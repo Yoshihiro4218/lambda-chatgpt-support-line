@@ -34,6 +34,9 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
     private static final String OPENAI_GPT3_TOKEN = System.getenv("OPENAI_GPT3_TOKEN");
     private static final String AWS_ACCESS_KEY = System.getenv("AWS_MY_ACCESS_KEY");
     private static final String AWS_ACCESS_SECRET = System.getenv("AWS_MY_ACCESS_SECRET");
+    private static final int SCAN_RECORD_NUM = Integer.parseInt(System.getenv("SCAN_RECORD_NUM"));
+    private static final long OPENAPI_DURATION_SECONDS = Integer.parseInt(System.getenv("OPENAPI_DURATION_SECONDS"));
+    private static final int REST_TEMPLATE_COMMON_TIMEOUT = Integer.parseInt(System.getenv("REST_TEMPLATE_COMMON_TIMEOUT"));
 
     private static final String LINE_REPLY_POST_URL = "https://api.line.me/v2/bot/message/reply";
     private static final String DYNAMODB_URL = "https://dynamodb.ap-northeast-1.amazonaws.com";
@@ -60,7 +63,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
                                     .content(body.getEvents()[0].getMessage().getText())
                                     .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
                                     .build());
-            List<Chat> chatHistory = chatRepository.scan();
+            List<Chat> chatHistory = chatRepository.scanLimit(SCAN_RECORD_NUM);
             String assistantMessage = chatOpenAI(chatHistory);
             chatRepository.save(Chat.builder()
                                     .id(UUID.randomUUID().toString())
@@ -93,7 +96,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
     }
 
     private String chatOpenAI(List<Chat> messages) {
-        final var service = new OpenAiService(OPENAI_GPT3_TOKEN, Duration.ofSeconds(150000L));
+        final var service = new OpenAiService(OPENAI_GPT3_TOKEN, Duration.ofSeconds(OPENAPI_DURATION_SECONDS));
         System.out.println("\nCreating completion...");
         List<ChatMessage> chatMessages = new LinkedList<>();
         chatMessages.add(new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"));
@@ -124,11 +127,11 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
     private RestTemplate restTemplate() {
         var clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory(HttpClientBuilder.create().build());
         // 接続が確立するまでのタイムアウト
-        clientHttpRequestFactory.setConnectTimeout(5000);
+        clientHttpRequestFactory.setConnectTimeout(REST_TEMPLATE_COMMON_TIMEOUT);
         // コネクションマネージャーからの接続要求のタイムアウト
-        clientHttpRequestFactory.setConnectionRequestTimeout(5000);
+        clientHttpRequestFactory.setConnectionRequestTimeout(REST_TEMPLATE_COMMON_TIMEOUT);
         // ソケットのタイムアウト（パケット間のタイムアウト）
-        clientHttpRequestFactory.setReadTimeout(5000);
+        clientHttpRequestFactory.setReadTimeout(REST_TEMPLATE_COMMON_TIMEOUT);
         return new RestTemplate(clientHttpRequestFactory);
     }
 

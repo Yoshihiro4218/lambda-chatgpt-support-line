@@ -3,6 +3,7 @@ package com.kadowork.app;
 import com.kadowork.app.entity.*;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.*;
+import software.amazon.awssdk.enhanced.dynamodb.model.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -23,6 +24,11 @@ public class ChatRepository {
     public List<Chat> scan() {
         DynamoDbTable<Chat> table = client.table(TABLE_NAME, TableSchema.fromBean(Chat.class));
         return table.scan().items().stream().collect(Collectors.toList());
+    }
+
+    public List<Chat> scanLimit(int limit) {
+        DynamoDbTable<Chat> table = client.table(TABLE_NAME, TableSchema.fromBean(Chat.class));
+        return table.scan(ScanEnhancedRequest.builder().limit(limit).build()).items().stream().collect(Collectors.toList());
     }
 
     // index で引くとき
