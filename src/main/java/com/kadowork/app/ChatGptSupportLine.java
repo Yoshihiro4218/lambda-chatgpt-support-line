@@ -69,9 +69,10 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
                                                    .stream()
                                                    .sorted(Comparator.comparing(Chat::getTypedAt).reversed())
                                                    .limit(SCAN_RECORD_NUM)
+                                                   .sorted(Comparator.comparing(Chat::getTypedAt))
                                                    .collect(Collectors.toList());
             System.out.println("件数: " + chatHistory.size());
-            System.out.println(chatHistory);
+            chatHistory.forEach(System.out::println);
             String assistantMessage = chatOpenAI(chatHistory);
             chatRepository.save(Chat.builder()
                                     .id(UUID.randomUUID().toString())
