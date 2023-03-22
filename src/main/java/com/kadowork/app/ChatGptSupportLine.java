@@ -57,20 +57,36 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
             output.setReplyToken(body.getEvents()[0].getReplyToken());
             Output.Messages outMessage = new Output.Messages();
             outMessage.setType("text");
-            chatRepository.save(Chat.builder()
-                                    .id(UUID.randomUUID().toString())
-                                    .userId(body.getEvents()[0].getSource().getUserId())
-                                    .role(user)
-                                    .content(body.getEvents()[0].getMessage().getText())
-                                    .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
-                                    .build());
-            // DynamoDB から指定分だけ取ってきたいが、現状できていないので暫定的に。
-            List<Chat> chatHistory = chatRepository.scan()
-                                                   .stream()
-                                                   .sorted(Comparator.comparing(Chat::getTypedAt).reversed())
-                                                   .limit(SCAN_RECORD_NUM)
-                                                   .sorted(Comparator.comparing(Chat::getTypedAt))
-                                                   .collect(Collectors.toList());
+
+            // 暫定的に --no-history 指定で履歴取得しないようにする (max tokens のとき用)
+            List<Chat> chatHistory = new ArrayList<>();
+            if (body.getEvents()[0].getMessage().getText().startsWith("--no-history ")) {
+                String messageWithoutOption = body.getEvents()[0].getMessage().getText().substring(13);
+                Chat chat = Chat.builder()
+                                .id(UUID.randomUUID().toString())
+                                .userId(body.getEvents()[0].getSource().getUserId())
+                                .role(user)
+                                .content(messageWithoutOption)
+                                .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
+                                .build();
+                chatRepository.save(chat);
+                chatHistory.add(chat);
+            } else {
+                chatRepository.save(Chat.builder()
+                                        .id(UUID.randomUUID().toString())
+                                        .userId(body.getEvents()[0].getSource().getUserId())
+                                        .role(user)
+                                        .content(body.getEvents()[0].getMessage().getText())
+                                        .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
+                                        .build());
+                // DynamoDB から指定分だけ取ってきたいが、現状できていないので暫定的に。
+                chatHistory = chatRepository.scan()
+                                            .stream()
+                                            .sorted(Comparator.comparing(Chat::getTypedAt).reversed())
+                                            .limit(SCAN_RECORD_NUM)
+                                            .sorted(Comparator.comparing(Chat::getTypedAt))
+                                            .collect(Collectors.toList());
+            }
             System.out.println("件数: " + chatHistory.size());
             chatHistory.forEach(System.out::println);
             String assistantMessage = chatOpenAI(chatHistory);
@@ -108,7 +124,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         final var service = new OpenAiService(OPENAI_GPT3_TOKEN, Duration.ofSeconds(OPENAPI_DURATION_SECONDS));
         System.out.println("\nCreating completion...");
         List<ChatMessage> chatMessages = new LinkedList<>();
-        chatMessages.add(new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"));
+//        chatMessages.add(new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"));
         messages.stream()
                 .sorted(Comparator.comparing(Chat::getTypedAt))
                 .forEach(x -> chatMessages.add(new ChatMessage(x.getRole().toString(), x.getContent())));
