@@ -80,7 +80,8 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
                                         .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())
                                         .build());
                 // DynamoDB から指定分だけ取ってきたいが、現状できていないので暫定的に。
-                chatHistory = chatRepository.scan()
+                // --> いったん、userId で引くようにした
+                chatHistory = chatRepository.getByUserId(body.getEvents()[0].getSource().getUserId())
                                             .stream()
                                             .sorted(Comparator.comparing(Chat::getTypedAt).reversed())
                                             .limit(SCAN_RECORD_NUM)
@@ -92,7 +93,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
             String assistantMessage = chatOpenAI(chatHistory);
             chatRepository.save(Chat.builder()
                                     .id(UUID.randomUUID().toString())
-                                    .userId("ASSISTANT_" + body.getEvents()[0].getSource().getUserId())
+                                    .userId(body.getEvents()[0].getSource().getUserId())
                                     .role(assistant)
                                     .content(assistantMessage)
                                     .typedAt(LocalDateTime.now(ZoneId.of("Asia/Tokyo")).toString())

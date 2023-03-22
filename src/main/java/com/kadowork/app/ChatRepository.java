@@ -15,6 +15,7 @@ public class ChatRepository {
     private final DynamoDbEnhancedClient client;
 
     private static final String TABLE_NAME = "chatgpt-support-line--chat-history";
+    private static final String INDEX_NAME = "userId-index";
 
     public void save(Chat chat) {
         DynamoDbTable<Chat> table = client.table(TABLE_NAME, TableSchema.fromBean(Chat.class));
@@ -35,16 +36,13 @@ public class ChatRepository {
                     .items().stream().collect(Collectors.toList());
     }
 
-    // index で引くとき
-    public <T> T getByXXX(int key, Class<T> recordClass) {
-        String tableName = recordClass.getSimpleName().toLowerCase(Locale.ENGLISH);
-        String indexName = recordClass.getSimpleName().toLowerCase(Locale.ENGLISH) + "_index"; // 適当
-        DynamoDbTable<T> table = client.table(tableName, TableSchema.fromBean(recordClass));
-        DynamoDbIndex<T> index = table.index(indexName);
-        return index.query(r -> r.queryConditional(keyEqualTo(k -> k.partitionValue(key))))
+    public List<Chat> getByUserId(String userId) {
+        DynamoDbTable<Chat> table = client.table(TABLE_NAME, TableSchema.fromBean(Chat.class));
+        DynamoDbIndex<Chat> index = table.index(INDEX_NAME);
+        return index.query(r -> r.queryConditional(keyEqualTo(k -> k.partitionValue(userId))))
                     .stream()
                     .findFirst()
-                    .orElseThrow(() -> new RuntimeException("exception")) // 適当
-                    .items().get(0);
+                    .orElseThrow(() -> new RuntimeException("DynamoDB index exception")) // 適当
+                    .items();
     }
 }
