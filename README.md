@@ -1,7 +1,7 @@
 # LINE で OpenAI 社の API と連携するチャットボットを作ってみた (ChatGPT)
 ## 構成とやりとりの流れ
 <div align="center">
-<img src="screenshot_for_lt/chat-gpt-support-line.drawio.png" alt="構成とやりとりの流れ" title="構成とやりとりの流れ">
+<img src="material_for_lt/chat-gpt-support-line.drawio.png" alt="構成とやりとりの流れ" title="構成とやりとりの流れ">
 </div>
 
 1. LINE 公式アカウントの `MessagingAPI` を用いて AWS の `API Gateway` に紐付いている URL に Webhook イベントを送信する
