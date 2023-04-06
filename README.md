@@ -11,7 +11,7 @@
 5. AWS `DynamoDB` に返答を保存
 6. `MessagingAPI` の `Reply API` を叩いて返事を LINE に送信
 
-## 1. MessagingAPI で Webhook イベント送信, 2. Lambda に連携
+## 1. MessagingAPI で Webhook イベント送信 -> 2. Lambda に連携
 LINE 公式アカウントを作る
 ![](material_for_lt/1.png)
 
