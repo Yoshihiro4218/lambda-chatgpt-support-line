@@ -48,7 +48,7 @@ Lambda で受け取った発言内容をまずは DynamoDB に保存 + 過去の
 ## 4. OpenAI 社の API と連携
 
 いよいよ OpenAI 社の API を叩きます  
-その際必要になるものは主に以下です
+その際必要になるものは主に以下のようなものがあります
 
 - model
 - maxTokens
