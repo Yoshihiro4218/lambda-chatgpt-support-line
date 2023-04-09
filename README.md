@@ -52,6 +52,7 @@ Lambda で受け取った発言内容をまずは DynamoDB に保存 + 過去の
 
 - model
 - maxTokens
+- temperature
 - messages
     - role
     - content
@@ -69,9 +70,9 @@ OpenAI 社では用途に応じて様々なモデルを用意してくれてい�
 | Codex      | code-davinci-002 |      8,001 |           自然言語をコードに変換するのが得意           |
 | Whisper    |    whisper-1     |          - |  音声認識モデルであり、多言語の音声認識、音声翻訳、言語識別を実行できる  |
 
+### maxTokens
 
+### temperature
 
-
-
-
+### messages
 
