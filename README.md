@@ -45,19 +45,17 @@ Lambda で受け取った発言内容をまずは DynamoDB に保存 + 過去の
 を設けていますが、一例なので過不足はあるかもしれません  
 ロールについては後述します
 
-## 4. OpenAI 社の API と連携
+## 4. OpenAI 社の API と連携 -> 5. DynamoDB に返答を保存
 
 いよいよ OpenAI 社の API を叩きます  
 その際必要になるものは主に以下のようなものがあります
 
-- model
-- maxTokens
-- temperature
-- messages
-    - role
-    - content
-
-### model
+- model : モデル。後述
+- maxTokens : API から返却される最大のトークン数 (≒ 文字数 (厳密には違う))
+- temperature : 高い値だとより複雑な文章を生成できるが不自然になる可能性も含んでいる
+- messages : 会話内容
+    - role : ロール。後述
+    - content : 内容
 
 OpenAI 社では用途に応じて様々なモデルを用意してくれています  
 以下が主なモデルです
@@ -70,9 +68,37 @@ OpenAI 社では用途に応じて様々なモデルを用意してくれてい�
 | Codex      | code-davinci-002 |      8,001 |           自然言語をコードに変換するのが得意           |
 | Whisper    |    whisper-1     |          - |  音声認識モデルであり、多言語の音声認識、音声翻訳、言語識別を実行できる  |
 
-### maxTokens
+メッセージには本文の他にロールも渡します。ロールには以下の3つがあります。
 
-### temperature
+- system : AI の設定などを記述
+    - ex. 〇〇という設定で会話をします / 口調のサンプルは「〜〜」です など
+- assistant : AI の発言
+- user : ユーザーの発言
 
-### messages
+API を叩くとしばらくして返事が返ってくるので、次の発言時に過去の会話を投げられるようにするため、AI からの返答を保存しておきます。
+
+![](material_for_lt/10.png)
+
+なお、今回用いているのは `gpt-3.5-turbo` で、1,000トークンあたり `0.002ドル`（約0.26円）です。
+
+![](material_for_lt/9.png)
+
+## 6. MessagingAPI の Reply API を叩いて返事を LINE に送信
+xxx
+
+
+=====================
+TODO
+
+![](material_for_lt/6.png)
+
+また、先述のように直近の会話も一緒に投げているので、以下のように会話を続けると細かい説明無しで文脈も把握した上で返事をしてくれます。
+
+![](material_for_lt/7.png)
+
+↓ 返事
+
+![](material_for_lt/8.png)
+
+
 
