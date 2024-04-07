@@ -32,7 +32,8 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
     private final ChatRepository chatRepository = chatRepository();
 
     private static final String LINE_ACCESS_TOKEN = System.getenv("LINE_ACCESS_TOKEN");
-    private static final String OPENAI_GPT3_TOKEN = System.getenv("OPENAI_GPT3_TOKEN");
+    private static final String OPENAI_TOKEN = System.getenv("OPENAI_TOKEN");
+    private static final String OPENAI_MODEL_NAME = System.getenv("OPENAI_MODEL_NAME");
     private static final String AWS_ACCESS_KEY = System.getenv("AWS_MY_ACCESS_KEY");
     private static final String AWS_ACCESS_SECRET = System.getenv("AWS_MY_ACCESS_SECRET");
     private static final int SCAN_RECORD_NUM = Integer.parseInt(System.getenv("SCAN_RECORD_NUM"));
@@ -122,7 +123,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
     }
 
     private String chatOpenAI(List<Chat> messages) {
-        final var service = new OpenAiService(OPENAI_GPT3_TOKEN, Duration.ofSeconds(OPENAPI_DURATION_SECONDS));
+        final var service = new OpenAiService(OPENAI_TOKEN, Duration.ofSeconds(OPENAPI_DURATION_SECONDS));
         System.out.println("\nCreating completion...");
         List<ChatMessage> chatMessages = new LinkedList<>();
 //        chatMessages.add(new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"));
@@ -131,7 +132,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
                 .forEach(x -> chatMessages.add(new ChatMessage(x.getRole().toString(), x.getContent())));
         System.out.println(chatMessages);
         final var chatCompletionRequest = ChatCompletionRequest.builder()
-                                                               .model("gpt-3.5-turbo")
+                                                               .model(OPENAI_MODEL_NAME)
                                                                .maxTokens(1024)
                                                                .messages(chatMessages)
                                                                .build();
