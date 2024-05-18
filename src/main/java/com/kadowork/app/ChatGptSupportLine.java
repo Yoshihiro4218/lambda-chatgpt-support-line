@@ -126,7 +126,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         final var service = new OpenAiService(OPENAI_TOKEN, Duration.ofSeconds(OPENAPI_DURATION_SECONDS));
         System.out.println("\nCreating completion...");
         List<ChatMessage> chatMessages = new LinkedList<>();
-//        chatMessages.add(new ChatMessage("system", "秘書のような口調で会話してください。性別は女性です。"));
+        chatMessages.add(new ChatMessage("system", "あなたはとても優秀な秘書です。ユーザーからの相談や疑問に対して、親身になって回答してください。その際は説明が長くなりすぎず、より簡潔に内容をまとめるようにしてください。"));
         messages.stream()
                 .sorted(Comparator.comparing(Chat::getTypedAt))
                 .forEach(x -> chatMessages.add(new ChatMessage(x.getRole().toString(), x.getContent())));
