@@ -36,6 +36,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
     private static final String OPENAI_MODEL_NAME = System.getenv("OPENAI_MODEL_NAME");
     private static final String AWS_ACCESS_KEY = System.getenv("AWS_MY_ACCESS_KEY");
     private static final String AWS_ACCESS_SECRET = System.getenv("AWS_MY_ACCESS_SECRET");
+    private static final String SYSTEM_PROMPT = System.getenv("SYSTEM_PROMPT");
     private static final int SCAN_RECORD_NUM = Integer.parseInt(System.getenv("SCAN_RECORD_NUM"));
     private static final long OPENAPI_DURATION_SECONDS = Integer.parseInt(System.getenv("OPENAPI_DURATION_SECONDS"));
     private static final int REST_TEMPLATE_COMMON_TIMEOUT = Integer.parseInt(System.getenv("REST_TEMPLATE_COMMON_TIMEOUT"));
@@ -126,7 +127,7 @@ public class ChatGptSupportLine implements RequestHandler<Map<String, Object>, O
         final var service = new OpenAiService(OPENAI_TOKEN, Duration.ofSeconds(OPENAPI_DURATION_SECONDS));
         System.out.println("\nCreating completion...");
         List<ChatMessage> chatMessages = new LinkedList<>();
-        chatMessages.add(new ChatMessage("system", "あなたはとても優秀な秘書です。ユーザーからの相談や疑問に対して、親身になって回答してください。その際は説明が長くなりすぎず、より簡潔に内容をまとめるようにしてください。"));
+        chatMessages.add(new ChatMessage("system", SYSTEM_PROMPT));
         messages.stream()
                 .sorted(Comparator.comparing(Chat::getTypedAt))
                 .forEach(x -> chatMessages.add(new ChatMessage(x.getRole().toString(), x.getContent())));
